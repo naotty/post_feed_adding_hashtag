@@ -20,9 +20,10 @@ session_start();
 unset($_SESSION['ri_test_msg']);
 
 ?>
-<!doctype html>
+<!DOCTYPE html>
 <html xmlns:fb="http://www.facebook.com/2008/fbml">
   <head>
+	<meta charset="UTF-8">
     <title>投稿完了</title>
     <style>
       body {

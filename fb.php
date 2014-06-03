@@ -20,6 +20,7 @@ require './src/facebook.php';
 session_start();
 
 
+// TODO: set application id
 // Create our Application instance (replace this with your appId and secret).
 $facebook = new Facebook(array(
   'appId'  => '',
@@ -58,10 +59,24 @@ if ($user) {
   $logoutUrl = $facebook->getLogoutUrl();
 
 
-	try
-	{
+   try {
 
-		$message = htmlentities($_POST['message'],ENT_QUOTES,'UTF-8');
+		if (is_uploaded_file($_FILES["upfile"]["tmp_name"])) {
+			if (move_uploaded_file($_FILES["upfile"]["tmp_name"], "tmp/" . $_FILES["upfile"]["name"])) {
+				chmod("tmp/" . $_FILES["upfile"]["name"], 0644);
+			}
+		}
+
+
+		$source = null;
+		if ( !empty($_FILES["upfile"]["name"]) ){
+			$source = '@' . realpath('tmp/' . $_FILES["upfile"]["name"]);
+		}
+
+
+		if ( !empty($_POST['message']) ){
+			$message = htmlentities($_POST['message'],ENT_QUOTES,'UTF-8');
+		}
 
 		if ( empty($message) ){
 			$message = $_SESSION['ri_test_msg'];
@@ -69,24 +84,45 @@ if ($user) {
 
 		if ( !empty( $message ) ){
 
-			//ウォールへ投稿
-			$result = $facebook->api("/me/feed", "post", array(
-				"message" => $message . ' #test',
-				"caption" => 'リンクのキャプション(見出し)',
-				"description" => 'リンクの説明文',
-			));
+
+			if ( !empty( $source ) ){
+
+				// アルバムへ投稿
+				$facebook->setFileUploadSupport(true);
+
+				$attachment = array(
+					'image' => $source,
+					'name' => $message . ' #test',
+				);
+				$result = $facebook->api("/me/photos", 'post', $attachment);
+
+			} else {
+
+				//ウォールへ投稿
+				$result = $facebook->api("/me/feed", "post", array(
+					"message" => $message . ' #test',
+					"caption" => 'リンクのキャプション(見出し)',
+					"description" => 'リンクの説明文'
+				));
+
+			}
+
 
 			header("Location: ./result.php" );
 			exit();
 
 		}
 
+	} catch (FacebookApiException $e) {
+		echo "FacebookApiException : something is wrong, please try again later.<br>";
+		echo $e->getMessage();
+		exit();
 
-	}
-	catch(FacebookApiException $e)
-	{
-		//エラー処理がうんたらかんたら
-		var_dump($e);
+	} catch (Exception $e) {
+		echo "Exception : something is wrong, please try again later.<br>";
+		echo $e->getMessage();
+		exit();
+
 	}
 
 
@@ -103,10 +139,11 @@ if ($user) {
 
 
 ?>
-<!doctype html>
+<!DOCTYPE html>
 <html xmlns:fb="http://www.facebook.com/2008/fbml">
   <head>
-    <title>Facebook認証</title>
+	<meta charset="UTF-8">
+	<title>Facebook認証</title>
     <style>
       body {
         font-family: 'Lucida Grande', Verdana, Arial, sans-serif;
