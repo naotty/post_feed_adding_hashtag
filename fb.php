@@ -16,6 +16,7 @@
  */
 
 require './src/facebook.php';
+require './clsCommon.php';
 
 session_start();
 
@@ -54,6 +55,8 @@ $params = array(
 	'scope'=>'publish_stream'
 );
 
+$clsCommon = new clsCommon();
+
 if ($user) {
 
   $logoutUrl = $facebook->getLogoutUrl();
@@ -61,17 +64,18 @@ if ($user) {
 
    try {
 
-		if (is_uploaded_file($_FILES["upfile"]["tmp_name"])) {
-			if (move_uploaded_file($_FILES["upfile"]["tmp_name"], "tmp/" . $_FILES["upfile"]["name"])) {
-				chmod("tmp/" . $_FILES["upfile"]["name"], 0644);
-			}
-		}
+	   $path = null;
+	   if ( !empty($_SESSION['ri_test_file']) ){
+		   $path = $_SESSION['ri_test_file'];
+	   } else {
+		   if ( !empty($_FILES['upfile']) ){
+			   $path = $clsCommon->upload($_FILES['upfile']);
+		   }
+	   }
 
-
-		$source = null;
-		if ( !empty($_FILES["upfile"]["name"]) ){
-			$source = '@' . realpath('tmp/' . $_FILES["upfile"]["name"]);
-		}
+	   if(!empty($path)){
+		   $source = '@' . realpath($path);
+	   }
 
 
 		if ( !empty($_POST['message']) ){
@@ -134,6 +138,8 @@ if ($user) {
 	if ( !empty( $message ) ){
 		$_SESSION['ri_test_msg'] = $message;
 	}
+
+	$_SESSION['ri_test_file'] = $clsCommon->upload($_FILES['upfile']);
 
 }
 
